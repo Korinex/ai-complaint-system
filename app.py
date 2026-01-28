@@ -1,15 +1,67 @@
+
 import streamlit as st
 import pandas as pd
 from textblob import TextBlob
 import uuid
-from datetime import datetime
 
-# ---------- CONFIG ----------
-st.set_page_config(page_title="AI Complaint Management System", layout="wide")
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="AI Complaint System",
+    layout="wide",
+    page_icon="🧠"
+)
 
+# ---------------- CUSTOM CSS ----------------
+st.markdown("""
+<style>
+body {
+    background-color: #f4f6f9;
+}
+.main-title {
+    font-size: 42px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #6a11cb, #2575fc);
+    -webkit-background-clip: text;
+    color: transparent;
+}
+.subtitle {
+    font-size: 18px;
+    color: #555;
+}
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    margin-bottom: 15px;
+}
+.badge-high {
+    color: white;
+    background-color: #e74c3c;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+.badge-medium {
+    color: white;
+    background-color: #f39c12;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+.badge-low {
+    color: white;
+    background-color: #2ecc71;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- DATA ----------------
 DATA_FILE = "complaints.csv"
 
-# ---------- LOAD DATA ----------
 def load_data():
     try:
         return pd.read_csv(DATA_FILE)
@@ -25,129 +77,119 @@ def save_data(df):
 
 df = load_data()
 
-# ---------- NLP FUNCTIONS ----------
+# ---------------- AI FUNCTIONS ----------------
 def classify_category(text):
-    text = text.lower()
-    if any(word in text for word in ["water", "pipeline", "tap"]):
+    t = text.lower()
+    if any(w in t for w in ["water", "tap", "pipeline"]):
         return "Water"
-    elif any(word in text for word in ["road", "pothole", "street"]):
+    if any(w in t for w in ["road", "pothole"]):
         return "Roads"
-    elif any(word in text for word in ["garbage", "waste", "dirty"]):
+    if any(w in t for w in ["garbage", "waste"]):
         return "Sanitation"
-    elif any(word in text for word in ["hospital", "doctor", "medicine"]):
+    if any(w in t for w in ["hospital", "medicine"]):
         return "Health"
-    elif any(word in text for word in ["school", "college", "teacher"]):
+    if any(w in t for w in ["school", "college"]):
         return "Education"
-    elif any(word in text for word in ["bribe", "corrupt"]):
+    if any(w in t for w in ["bribe", "corrupt"]):
         return "Corruption"
-    else:
-        return "Other"
+    return "Other"
 
 def detect_priority(text):
-    text = text.lower()
-    if any(word in text for word in ["urgent", "danger", "accident", "no water", "disease"]):
+    t = text.lower()
+    if any(w in t for w in ["urgent", "danger", "no water", "disease"]):
         return "High"
-    elif any(word in text for word in ["not working", "delay", "problem"]):
+    if any(w in t for w in ["problem", "delay", "not working"]):
         return "Medium"
-    else:
-        return "Low"
+    return "Low"
 
-def analyze_sentiment(text):
-    polarity = TextBlob(text).sentiment.polarity
-    if polarity < -0.3:
-        return "Angry"
-    elif polarity < 0:
-        return "Frustrated"
-    else:
-        return "Neutral"
+def sentiment(text):
+    p = TextBlob(text).sentiment.polarity
+    if p < -0.3:
+        return "Angry 😡"
+    elif p < 0:
+        return "Frustrated 😤"
+    return "Neutral 🙂"
 
-def route_department(category):
-    mapping = {
-        "Water": "Water Supply Department",
-        "Roads": "Public Works Department",
+def department(cat):
+    return {
+        "Water": "Water Supply Dept",
+        "Roads": "Public Works Dept",
         "Sanitation": "Municipal Sanitation",
-        "Health": "Health Department",
-        "Education": "Education Department",
+        "Health": "Health Dept",
+        "Education": "Education Dept",
         "Corruption": "Anti-Corruption Bureau",
-        "Other": "General Administration"
-    }
-    return mapping.get(category, "General Administration")
+        "Other": "General Admin"
+    }[cat]
 
-# ---------- UI ----------
-st.title("🧠 AI-Powered Complaint Management System")
+# ---------------- HEADER ----------------
+st.markdown("<div class='main-title'>AI Complaint Management System</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Smart governance through AI-powered complaint analysis</div>", unsafe_allow_html=True)
+st.write("")
 
-tab1, tab2 = st.tabs(["🧑 Citizen Portal", "🖥️ Admin Dashboard"])
+tab1, tab2 = st.tabs(["🧑 Citizen Portal", "🖥 Admin Dashboard"])
 
-# ---------- CITIZEN PORTAL ----------
+# ---------------- CITIZEN PORTAL ----------------
 with tab1:
-    st.header("Submit a Complaint")
+    st.subheader("📨 Submit a Complaint")
 
-    name = st.text_input("Name (optional)")
+    name = st.text_input("Your Name (optional)")
     location = st.text_input("Location")
-    complaint_text = st.text_area("Describe your complaint")
+    complaint = st.text_area("Describe your issue")
 
-    if st.button("Submit Complaint"):
-        if location and complaint_text:
-            category = classify_category(complaint_text)
-            priority = detect_priority(complaint_text)
-            sentiment = analyze_sentiment(complaint_text)
-            department = route_department(category)
+    if st.button("🚀 Submit Complaint"):
+        if location and complaint:
+            cat = classify_category(complaint)
+            pr = detect_priority(complaint)
+            sent = sentiment(complaint)
+            dept = department(cat)
 
-            new_entry = {
+            new = {
                 "id": str(uuid.uuid4())[:8],
                 "name": name if name else "Anonymous",
                 "location": location,
-                "complaint": complaint_text,
-                "category": category,
-                "priority": priority,
-                "sentiment": sentiment,
-                "department": department,
+                "complaint": complaint,
+                "category": cat,
+                "priority": pr,
+                "sentiment": sent,
+                "department": dept,
                 "status": "Submitted"
             }
 
-            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([new])], ignore_index=True)
             save_data(df)
 
-            st.success("✅ Complaint Submitted Successfully!")
-            st.markdown(f"""
-            **Complaint ID:** `{new_entry['id']}`  
-            **Category:** {category}  
-            **Priority:** {priority}  
-            **Sentiment:** {sentiment}  
-            **Assigned To:** {department}
-            """)
+            st.success("Complaint submitted successfully 🎉")
+            st.info(f"""
+**Complaint ID:** {new['id']}  
+**Category:** {cat}  
+**Priority:** {pr}  
+**Department:** {dept}
+""")
         else:
-            st.error("Please fill in all required fields.")
+            st.error("Please fill all required fields.")
 
-# ---------- ADMIN DASHBOARD ----------
+# ---------------- ADMIN DASHBOARD ----------------
 with tab2:
-    st.header("Admin Dashboard")
+    st.subheader("📊 Admin Dashboard")
 
     if df.empty:
         st.info("No complaints yet.")
     else:
-        col1, col2 = st.columns(2)
+        for _, row in df.iterrows():
+            badge = "badge-low"
+            if row["priority"] == "High":
+                badge = "badge-high"
+            elif row["priority"] == "Medium":
+                badge = "badge-medium"
 
-        with col1:
-            dept_filter = st.selectbox("Filter by Department", ["All"] + sorted(df["department"].unique().tolist()))
-        with col2:
-            priority_filter = st.selectbox("Filter by Priority", ["All", "High", "Medium", "Low"])
-
-        filtered_df = df.copy()
-
-        if dept_filter != "All":
-            filtered_df = filtered_df[filtered_df["department"] == dept_filter]
-
-        if priority_filter != "All":
-            filtered_df = filtered_df[filtered_df["priority"] == priority_filter]
-
-        st.dataframe(filtered_df, use_container_width=True)
-
-        st.subheader("Update Complaint Status")
-        selected_id = st.selectbox("Select Complaint ID", df["id"].tolist())
-        new_status = st.selectbox("New Status", ["Submitted", "In Progress", "Resolved"])
-
-        if st.button("Update Status"):
-            df.loc[df["id"] == selected_id, "status"] = new_status
-            save_data(df)
-            st.success("Status updated successfully!")
+            st.markdown(f"""
+            <div class="card">
+                <b>📍 {row['location']}</b><br>
+                <i>{row['complaint']}</i><br><br>
+                <span class="{badge}">{row['priority']} Priority</span><br><br>
+                🏷 Category: {row['category']}  
+                <br>🏢 Dept: {row['department']}  
+                <br>📌 Status: {row['status']}  
+                <br>💬 Sentiment: {row['sentiment']}
+            </div>
+            """, unsafe_allow_html=True)
