@@ -202,18 +202,53 @@ with tab1:
 # ---------------- ADMIN DASHBOARD ----------------
 with tab2:
     st.subheader("📊 Admin Dashboard")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        priority_filter = st.selectbox(
+            "Filter by Priority",
+            ["All", "High", "Medium", "Low"]
+        )
+
+    with col2:
+        category_filter = st.selectbox(
+            "Filter by Category",
+            ["All"] + sorted(df["category"].unique().tolist())
+        )
+
+    with col3:
+        department_filter = st.selectbox(
+            "Filter by Department",
+            ["All"] + sorted(df["department"].unique().tolist())
+        )
+
 
     if df.empty:
         st.info("No complaints yet.")
     else:
-        for _, row in df.iterrows():
-            badge = "badge-low"
-            if row["priority"] == "High":
-                badge = "badge-high"
-            elif row["priority"] == "Medium":
-                badge = "badge-medium"
+                filtered_df = df.copy()
 
-            st.markdown(f"""
+                if priority_filter != "All":
+                     filtered_df = filtered_df[filtered_df["priority"] == priority_filter]
+
+                if category_filter != "All":
+                    filtered_df = filtered_df[filtered_df["category"] == category_filter]
+
+                if department_filter != "All":
+                    filtered_df = filtered_df[filtered_df["department"] == department_filter]
+
+                if filtered_df.empty:
+                    st.info("No complaints match the selected filters.")
+                else:
+                    for _, row in filtered_df.iterrows():
+
+                        badge = "badge-low"
+                        if row["priority"] == "High":
+                            badge = "badge-high"
+                        elif row["priority"] == "Medium":
+                            badge = "badge-medium"
+
+                st.markdown(f"""
             <div class="card">
                 <b>📍 {row['location']}</b><br>
                 <i>{row['complaint']}</i><br><br>
@@ -224,4 +259,3 @@ with tab2:
                 <br>💬 Sentiment: {row['sentiment']}
             </div>
             """, unsafe_allow_html=True)
-
