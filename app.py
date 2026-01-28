@@ -15,46 +15,71 @@ st.set_page_config(
 st.markdown("""
 <style>
 body {
-    background-color: #f4f6f9;
+    background-color: #f2f4f7;
+    color: #1f2933;
 }
-.main-title {
-    font-size: 42px;
-    font-weight: 800;
-    background: linear-gradient(90deg, #6a11cb, #2575fc);
-    -webkit-background-clip: text;
-    color: transparent;
+
+h1, h2, h3, h4 {
+    color: #0f172a;
 }
-.subtitle {
-    font-size: 18px;
-    color: #555;
+
+.header {
+    background-color: #0b5ed7;
+    padding: 25px;
+    border-radius: 12px;
+    color: white;
+    margin-bottom: 20px;
 }
+
+.header-title {
+    font-size: 34px;
+    font-weight: 700;
+}
+
+.header-subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
 .card {
-    background: white;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    background-color: #ffffff;
+    padding: 18px;
+    border-radius: 12px;
+    border-left: 6px solid #0b5ed7;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
     margin-bottom: 15px;
+    color: #1f2933;
 }
+
+.card b {
+    color: #0f172a;
+}
+
 .badge-high {
+    background-color: #dc2626;
     color: white;
-    background-color: #e74c3c;
     padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
 }
+
 .badge-medium {
+    background-color: #f59e0b;
     color: white;
-    background-color: #f39c12;
     padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
 }
+
 .badge-low {
+    background-color: #16a34a;
     color: white;
-    background-color: #2ecc71;
     padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -122,8 +147,14 @@ def department(cat):
     }[cat]
 
 # ---------------- HEADER ----------------
-st.markdown("<div class='main-title'>AI Complaint Management System</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Smart governance through AI-powered complaint analysis</div>", unsafe_allow_html=True)
+st.markdown("""
+<div class="header">
+    <div class="header-title">AI-Powered Grievance Redressal System</div>
+    <div class="header-subtitle">
+        Intelligent complaint classification, prioritization, and routing
+    </div>
+</div>
+""", unsafe_allow_html=True)
 st.write("")
 
 tab1, tab2 = st.tabs(["🧑 Citizen Portal", "🖥 Admin Dashboard"])
@@ -193,3 +224,4 @@ with tab2:
                 <br>💬 Sentiment: {row['sentiment']}
             </div>
             """, unsafe_allow_html=True)
+
