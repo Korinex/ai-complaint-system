@@ -4,22 +4,60 @@ import os
 import uuid
 from datetime import datetime
 from textblob import TextBlob
-import plotly.express as px
-import folium
-from streamlit_folium import st_folium
+import plotly.express as px   
+import folium 
+from streamlit_folium import st_folium 
 
-# ---------------- CONFIG ----------------
+# ================== PAGE CONFIG ==================
 st.set_page_config(
-    page_title="AI Grievance Redressal",
-    page_icon="🧠",
+    page_title="Nexus",
+    page_icon="🏛️",
     layout="wide"
 )
 
-DATA_FILE = "grievances.csv"
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# ---------------- SKY BLUE UI ----------------
+# ================== CUSTOM CSS ==================
+st.markdown("""
+<style>
+body { background-color: #f6f8fc; }
+.gov-icon {
+    font-size: 80px;               
+    color: #4a90e2;                
+    background-color: #e6f0fa;     
+    padding: 20px 25px;            
+    border-radius: 50%;            
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);  
+    display: inline-block;        
+    text-align: center;            
+    margin-right: 15px;            
+    vertical-align: middle;        
+}
+.main-title {
+    font-size: 44px;
+    font-weight: 800;
+    text-align: center;
+    background: linear-gradient(90deg, #1e3c72, #2a5298);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.sub-title {
+    text-align: center;
+    font-size: 18px;
+    color: #555;
+}
+.card {
+    padding: 20px;
+    border-radius: 15px;
+    background: white;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+.badge-high {color: white; background: #e74c3c; padding: 4px 10px; border-radius: 20px;}
+.badge-medium {color: white; background: #f39c12; padding: 4px 10px; border-radius: 20px;}
+.badge-low {color: white; background: #27ae60; padding: 4px 10px; border-radius: 20px;}
+            
+</style>
+""", unsafe_allow_html=True)
+ #---------------- SKY BLUE UI ----------------
 st.markdown("""
 <style>
 .stApp {
@@ -39,25 +77,34 @@ footer{visibility:hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- INIT DATA ----------------
+# ================== CONSTANTS ==================
+DATA_FILE = "grievances.csv"
+
+# ================== INIT DATA ==================
 if not os.path.exists(DATA_FILE):
-    df_init = pd.DataFrame(columns=[
+    pd.DataFrame(columns=[
         "id","name","city","location","type","description",
         "department","sentiment","priority","status","created_at","image"
-    ])
-    df_init.to_csv(DATA_FILE, index=False)
+    ]).to_csv(DATA_FILE, index=False)
 
 def load_data():
-    df = pd.read_csv(DATA_FILE)
-    if "image" not in df.columns:
-        df["image"] = ""
-    return df
+    return pd.read_csv(DATA_FILE)
 
 def save_data(df):
     df.to_csv(DATA_FILE, index=False)
 
-df = load_data()
-
+def save_uploaded_file(uploaded_file):
+    """Save uploaded file and return the filename"""
+    if uploaded_file is not None:
+        import os
+        upload_dir = "uploads"
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+        file_path = os.path.join(upload_dir, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        return file_path
+    return ""
 # ---------------- CITY DROPDOWN ----------------
 city_list = [
     "Nagpur","Wardha","Jabalpur","Bhopal","Patna","Jamshedpur",
@@ -65,15 +112,17 @@ city_list = [
     "Indore","Gwalior","Ranchi","Gaya","Ahmedabad","Surat",
     "Bangalore","Mysore","Kolkata","Hyderabad","Delhi"
 ]
-
-# ---------------- AI FUNCTIONS ----------------
+# ================== AI FUNCTIONS ==================
 def analyze_sentiment(text):
-    p = TextBlob(text).sentiment.polarity
-    if p < -0.3:
-        return "Negative 😠"
-    elif p < 0.1:
+    try:
+        p = TextBlob(text).sentiment.polarity
+        if p < -0.3:
+            return "Negative 😠"
+        elif p < 0.1:
+            return "Neutral 😐"
+        return "Positive 😊"
+    except:
         return "Neutral 😐"
-    return "Positive 😊"
 
 def detect_priority(text):
     t = text.lower()
@@ -83,120 +132,135 @@ def detect_priority(text):
         return "Medium ⚠️"
     return "Low 🟢"
 
+
 def route_department(gtype):
-    return {
-        "Public Safety": "🚓 Police",
-        "Sanitation": "🧹 Municipal",
-        "Infrastructure": "🏗 PWD",
-        "Healthcare": "🏥 Health Dept",
-        "Utilities": "⚡ Electricity Board",
-        "Education": "🎓 Education Dept",
-        "Administrative Delay": "📂 General Admin",
-        "Other": "📂 General Admin"
-    }.get(gtype, "📂 General Admin")
+    dept_map = {
+        "🚨 Public Safety": "🚓 Police",
+        "🗑 Sanitation": "🧹 Municipal",
+        "🏗 Infrastructure": "🏗 PWD",
+        "🏥 Healthcare": "🏥 Health Dept",
+        "💡 Utilities": "⚡ Electricity Board",
+        "🏫 Education": "🎓 Education Dept",
+        "⌛ Administrative Delay": "📂 General Admin",
+        "📝 Other": "📂 General Admin"
+    }
+    return dept_map.get(gtype, "📂 General Admin")
 
-# ---------------- LOGIN ----------------
-st.markdown("<h1 style='text-align:center;'>🧠 AI-Powered Grievance Redressal System</h1>", unsafe_allow_html=True)
+# ================== HEADER ==================
+st.markdown("""
+<div class="gov-icon">🏛️</div> 
+""", unsafe_allow_html=True)
+st.markdown('<div class="main-title">NEXUS</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Smart Governance • NLP • Citizen-First Approach</div>', unsafe_allow_html=True)
+st.write("")
 
-role = st.selectbox("🔐 Login As", ["Citizen","Admin"])
-password = st.text_input("🔑 Password", type="password")
+# ================== LOGIN ==================
+with st.container():
+    col1, col2 = st.columns([2,1])
+    role = col1.selectbox("Login Role", ["Citizen", "Admin"], key="login_role")
+    password = col2.text_input("Password", type="password") if role == "Admin" else ""
 
-if role == "Admin" and password != "admin":
-    st.error("Invalid Admin Password ❌")
-    st.stop()
+if role == "Admin":
+    if not password or password != os.getenv("ADMIN_PASS", "admin"):
+        st.error("❌ Invalid admin password")
+        st.stop()
 
-if role == "Citizen" and password == "":
-    st.error("Password Required ❌")
-    st.stop()
+df = load_data()
 
-st.success(f"Logged in as {role} ✅")
-
-# ==================================================
-# ================= CITIZEN ========================
-# ==================================================
+# ================== CITIZEN DASHBOARD ==================
 if role == "Citizen":
+    st.markdown("## 📨 Submit a Grievance")
+    st.info("Fill out the form below to register your complaint.")
 
-    st.header("📨 Submit a Grievance")
+    with st.container():
+        c1, c2, c3 = st.columns(3)
+        name = c1.text_input("👤 Your Name", placeholder="Enter your full name")
+        city = c2.selectbox("🏙 City", city_list, key="citizen_city")
+        location = c3.selectbox("📍 Area", ["Urban","Semi-Urban","Rural"], help="Select your locality type", key="citizen_location")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        name = st.text_input("👤 Name")
-        city = st.selectbox("🏙 City", city_list)
+        gtype = st.selectbox(
+            "🗂 Grievance Category",
+            [
+                "🚨 Public Safety","🗑 Sanitation","🏗 Infrastructure",
+                "🏥 Healthcare","💡 Utilities","🏫 Education",
+                "⌛ Administrative Delay","📝 Other"
+            ],
+            help="Choose the category that best fits your complaint",
+            key="grievance_category"
+        )
 
-    with col2:
-        location = st.selectbox("📍 Location",["Urban","Rural","Semi-Urban"])
-        gtype = st.selectbox("⚠️ Type",[
-            "Public Safety","Sanitation","Infrastructure",
-            "Healthcare","Utilities","Education",
-            "Administrative Delay","Other"
-        ])
+        description = st.text_area(
+            "✏️ Describe your issue", height=120, 
+            placeholder="Provide as many details as possible to help us address it efficiently"
+        )
 
-    description = st.text_area("📝 Description")
+        uploaded_image = st.file_uploader(
+            "📸 Upload Evidence (Optional)", 
+            type=["jpg", "jpeg", "png", "gif"],
+            help="Upload a photo or screenshot as evidence"
+        )
 
-    uploaded_file = st.file_uploader("📷 Upload Photo (Optional)", type=["png","jpg","jpeg"])
+    if st.button("🚀 Analyze & Submit", use_container_width=True):
+        if not description or not city:
+            st.error("❗ City & description are required to submit a grievance")
+        else:
+            sid = str(uuid.uuid4())[:8]
+            
+            # Save uploaded image if exists
+            image_path = save_uploaded_file(uploaded_image)
 
-    if st.button("🚀 Submit Complaint"):
+            new = {
+                "id": sid,
+                "name": name or "Anonymous",
+                "city": city,
+                "location": location,
+                "type": gtype,
+                "description": description,
+                "department": route_department(gtype),
+                "sentiment": analyze_sentiment(description),
+                "priority": detect_priority(description),
+                "status": "Submitted",
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "image": image_path
+            }
 
-        sid = str(uuid.uuid4())[:8]
-        sentiment = analyze_sentiment(description)
-        priority = detect_priority(description)
-        department = route_department(gtype)
+            df = pd.concat([df, pd.DataFrame([new])], ignore_index=True)
+            save_data(df)
 
-        image_path = ""
-        if uploaded_file is not None:
-            image_filename = f"{sid}_{uploaded_file.name}"
-            image_path = os.path.join(UPLOAD_DIR, image_filename)
-            with open(image_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+            st.success("✅ Grievance submitted successfully!")
 
-        new_data = {
-            "id":sid,
-            "name":name if name else "Anonymous",
-            "city":city,
-            "location":location,
-            "type":gtype,
-            "description":description,
-            "department":department,
-            "sentiment":sentiment,
-            "priority":priority,
-            "status":"Submitted ⏳",
-            "created_at":datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "image":image_path
-        }
+            st.markdown("### 📊 AI Analysis")
+            m1, m2, m3 = st.columns(3)
 
-        df = pd.concat([df,pd.DataFrame([new_data])],ignore_index=True)
-        save_data(df)
+            # Add icons
+            sentiment_icon = {"Positive 😊":"Positive 😊","Neutral 😐":"Neutral 😐","Negative 😠":"Negative 😠"}
+            priority_icon = {"High 🔥":"High 🔥","Medium ⚠️":"Medium ⚠️","Low 🟢":"Low 🟢"}
 
-        st.success("Complaint Submitted Successfully 🎉")
+            m1.metric("Sentiment", new['sentiment'])
+            m2.metric("Priority", new['priority'])
+            m3.metric("Department", new['department'])
+            
+            if image_path:
+                st.image(uploaded_image, caption="📷 Uploaded Evidence")
 
-        c1,c2,c3 = st.columns(3)
-        c1.metric("Sentiment",sentiment)
-        c2.metric("Priority",priority)
-        c3.metric("Department",department)
-
-    st.divider()
-
-    st.subheader("📍 Your Complaint Timeline")
-
-    user_df = df[df["name"] == name] if name else df.tail(5)
-
-    if not user_df.empty:
-        timeline = user_df[["id","type","status","created_at"]]
-        st.dataframe(timeline,use_container_width=True)
+    st.markdown("## 🕒 Your Recent Complaints")
+    st.info("Here are your last 5 submitted grievances.")
+    if not df.empty:
+        user_complaints = df[df["name"] == name] if name else df.head(0)
+        if not user_complaints.empty:
+            st.dataframe(user_complaints.tail(5), use_container_width=True)
+        else:
+            st.info("No complaints submitted yet.")
     else:
-        st.info("No complaints yet.")
+        st.info("No complaints in the system yet.")
 
-# ==================================================
-# ================= ADMIN ==========================
-# ==================================================
+# ================== ADMIN DASHBOARD ==================
 else:
-
     st.header("🖥 Admin Dashboard")
-
     col1,col2,col3 = st.columns(3)
     col1.metric("📨 Total",len(df))
-    col2.metric("⏳ Pending",len(df[df["status"].str.contains("Submitted")]))
-    col3.metric("✅ Resolved",len(df[df["status"].str.contains("Resolved")]))
+    col2.metric("⏳ Pending",len(df[df["status"].str.contains("Submitted", na=False)]))
+    col3.metric("✅ Resolved",len(df[df["status"].str.contains("Resolved", na=False)]))
 
     st.divider()
 
@@ -205,7 +269,7 @@ else:
     if df.empty:
         st.info("No complaints available.")
     else:
-        selected_id = st.selectbox("Select Complaint ID",df["id"].tolist())
+        selected_id = st.selectbox("Select Complaint ID",df["id"].tolist(), key="admin_complaint_id")
         selected = df[df["id"]==selected_id].iloc[0]
 
         details_df = pd.DataFrame({
@@ -243,13 +307,15 @@ else:
         new_status = st.selectbox(
             "Update Status",
             status_options,
-            index=status_options.index(current_status)
+            index=status_options.index(current_status) if current_status in status_options else 0,
+            key="update_status"
         )
 
         if st.button("💾 Update Status"):
             df.loc[df["id"]==selected_id,"status"] = new_status
             save_data(df)
             st.success("Status Updated Successfully ✅")
+            st.rerun()
 
     st.divider()
 
